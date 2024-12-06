@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rastreamento de Motoristas</title>
+    <title>Rastreamento em Tempo Real</title>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
@@ -20,8 +20,11 @@
             measurementId: "G-HCNRHLMFDT"
         };
 
+        // Inicializa o Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+
+        let watchId; // Identificador para o watchPosition
 
         // Função para iniciar o rastreamento
         window.startTracking = function () {
@@ -33,12 +36,14 @@
             }
 
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition((position) => {
+                // Solicita permissão e inicia o monitoramento
+                watchId = navigator.geolocation.watchPosition((position) => {
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
 
                     console.log(`Motorista: ${name}, Latitude: ${latitude}, Longitude: ${longitude}`);
 
+                    // Atualiza a localização no Firebase
                     const locationRef = ref(db, `locations/${name}`);
                     set(locationRef, {
                         latitude: latitude,
@@ -60,17 +65,26 @@
                 alert("Geolocalização não é suportada neste navegador.");
             }
         };
+
+        // Função para parar o rastreamento
+        window.stopTracking = function () {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                alert("Rastreamento interrompido.");
+            }
+        };
     </script>
 </head>
 <body>
-    <h1>Rastreamento de Motoristas</h1>
+    <h1>Rastreamento em Tempo Real</h1>
 
     <label for="driverName">Nome do Motorista:</label>
     <input type="text" id="driverName" placeholder="Digite seu nome">
     <br><br>
 
     <button onclick="startTracking()">Iniciar Rastreamento</button>
+    <button onclick="stopTracking()">Parar Rastreamento</button>
 
-    <p>A localização será atualizada automaticamente no Firebase.</p>
+    <p>A localização será atualizada automaticamente no Firebase a cada mudança.</p>
 </body>
 </html>
