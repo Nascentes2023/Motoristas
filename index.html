@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitar Geolocalização</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCq1y3mAzmSSzDrdi6UDukRblU4naEH-lU&callback=initMap" async defer></script>
+
     <script type="module">
         // Importando Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
         // Configuração do Firebase
         const firebaseConfig = {
@@ -25,6 +27,27 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app); // Para interagir com o Realtime Database
 
+        let map;
+        let marker;
+
+        // Função para inicializar o mapa
+        function initMap() {
+            const defaultLocation = { lat: -23.5505, lng: -46.6333 }; // Localização padrão (São Paulo)
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: defaultLocation,
+                zoom: 15
+            });
+
+            marker = new google.maps.Marker({
+                position: defaultLocation,
+                map: map,
+                title: "Motorista",
+            });
+
+            // Acompanhar a localização do motorista em tempo real
+            trackLocation();
+        }
+
         // Função para capturar e salvar a geolocalização
         window.getAndSaveLocation = function() {
             // Obtém o nome do funcionário
@@ -36,7 +59,7 @@
             }
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((position) => {
+                navigator.geolocation.watchPosition((position) => {
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
 
@@ -48,10 +71,11 @@
                         latitude: latitude,
                         longitude: longitude
                     }).then(() => {
-                        alert('Sua localização foi atualizada!');
+                        console.log('Localização atualizada no Firebase!');
                     }).catch((error) => {
                         alert('Erro ao salvar localização: ' + error.message);
                     });
+
                 }, (error) => {
                     alert("Erro ao obter geolocalização: " + error.message);
                 });
@@ -59,11 +83,40 @@
                 alert("Geolocalização não é suportada neste navegador.");
             }
         };
+
+        // Função para acompanhar a localização do motorista
+        function trackLocation() {
+            const name = document.getElementById("employeeName").value;
+
+            // Verifica se o nome foi fornecido
+            if (!name) {
+                alert("Por favor, insira o nome do funcionário para acompanhar sua localização.");
+                return;
+            }
+
+            const locationRef = ref(db, `locations/${name}`);
+
+            // Ouve mudanças na localização do funcionário em tempo real
+            onValue(locationRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const latitude = data.latitude;
+                    const longitude = data.longitude;
+
+                    console.log(`Atualização recebida: Latitude: ${latitude}, Longitude: ${longitude}`);
+
+                    // Atualiza o marcador no mapa com a nova localização
+                    const position = { lat: latitude, lng: longitude };
+                    marker.setPosition(position);
+                    map.setCenter(position);
+                }
+            });
+        }
     </script>
 </head>
 <body>
     <h1>Solicitação de Geolocalização</h1>
-    
+
     <!-- Campo para o funcionário inserir seu nome -->
     <label for="employeeName">Nome do Funcionário:</label>
     <input type="text" id="employeeName" placeholder="Digite seu nome" required>
@@ -73,5 +126,8 @@
     <button onclick="getAndSaveLocation()">Compartilhar Localização</button>
 
     <p>Aguarde enquanto a localização é solicitada e enviada para o servidor.</p>
+
+    <!-- Mapa para exibir a localização do motorista -->
+    <div id="map" style="height: 500px; width: 100%;"></div>
 </body>
 </html>
