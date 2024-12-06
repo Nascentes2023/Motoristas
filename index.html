@@ -27,47 +27,44 @@
 
         // Função para rastrear e atualizar localização em tempo real
         window.trackLocation = function (name) {
-            if (!name) {
-                alert("Por favor, insira o nome do funcionário.");
-                return;
-            }
+    if (!name) {
+        alert("Por favor, insira o nome do funcionário.");
+        return;
+    }
 
-            if (navigator.geolocation) {
-                // Configurações para o rastreamento de localização
-                const options = {
-                    enableHighAccuracy: true, // Alta precisão
-                    timeout: 10000, // Tempo limite (10 segundos)
-                    maximumAge: 0 // Não usa localização em cache
-                };
-
-                // Ativando o rastreamento em tempo real
-                navigator.geolocation.watchPosition(
-                    (position) => {
-                        const latitude = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-
-                        console.log(`Atualizando localização para: Latitude ${latitude}, Longitude ${longitude}`);
-
-                        // Enviar dados para o Firebase
-                        const locationRef = ref(db, `locations/${name}`);
-                        set(locationRef, {
-                            latitude: latitude,
-                            longitude: longitude,
-                            timestamp: Date.now() // Marca de tempo opcional
-                        }).catch((error) => {
-                            console.error('Erro ao salvar localização:', error);
-                        });
-                    },
-                    (error) => {
-                        console.error("Erro ao rastrear localização:", error.message);
-                        alert("Não foi possível obter a localização. Verifique as permissões ou o sinal do GPS.");
-                    },
-                    options
-                );
-            } else {
-                alert("Geolocalização não é suportada neste navegador.");
-            }
+    if (navigator.geolocation) {
+        const options = {
+            enableHighAccuracy: true
         };
+
+        navigator.geolocation.watchPosition(
+            (position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                const locationRef = ref(db, `locations/${name}`);
+
+                console.log("Atualizando Firebase com:", latitude, longitude);
+
+                set(locationRef, {
+                    latitude: latitude,
+                    longitude: longitude,
+                    timestamp: Date.now()
+                }).then(() => {
+                    console.log('Localização salva com sucesso.');
+                }).catch((error) => {
+                    console.error('Erro ao salvar localização:', error.message);
+                });
+            },
+            (error) => {
+                console.error("Erro no rastreamento:", error.message);
+            },
+            options
+        );
+    } else {
+        alert("Geolocalização não suportada.");
+    }
+};
+
     </script>
 </head>
 <body>
